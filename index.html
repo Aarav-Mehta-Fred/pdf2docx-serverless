@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client-Side PDF to DOCX Converter</title>
+    
+    <style>
+        /* ================================================================
+          DARK MODE (DEFAULT) & LIGHT MODE THEME VARIABLES
+          ================================================================
+        */
+        :root {
+            /* Dark Mode Defaults */
+            --bg-base: #121212;
+            --bg-card: #1e1e1e;
+            --text-main: #f5f5f5;
+            --text-mut: #a3a3a3;
+            --acc-primary: #00cccc; /* Moderate Cyan */
+            --acc-hover: #009999;
+            --border: #e0e0e0;
+            --success-bg: #143314;
+            --success-txt: #4ade80;
+            --error-bg: #3b1212;
+            --error-txt: #fca5a5;
+            --shadow: 5px 5px 0px var(--border);
+            --shadow-hover: 2px 2px 0px var(--border);
+            --dot-color: #333333;
+            --canvas-bg: #ffffff; /* Keep canvas white for PDFs */
+            --dropzone-hover: #2a2a2a;
+        }
+
+        body.light-mode {
+            --bg-base: #f0eee9;
+            --bg-card: #ffffff;
+            --text-main: #1a1a1a;
+            --text-mut: #5a5a5a;
+            --acc-primary: #009999; /* Slightly deeper cyan for contrast on light */
+            --acc-hover: #006666;
+            --border: #1a1a1a;
+            --success-bg: #e8f5e9;
+            --success-txt: #2e7d32;
+            --error-bg: #ffebee;
+            --error-txt: #c62828;
+            --dot-color: #d5d3ce;
+            --dropzone-hover: #e5e3de;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1.5;
+            background-image: radial-gradient(var(--dot-color) 1px, transparent 1px);
+            background-size: 20px 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            position: relative;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .icon-btn {
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            color: var(--text-main);
+            padding: 0.5rem 1rem;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 3px 3px 0px var(--border);
+            transition: transform 0.1s, box-shadow 0.1s, background-color 0.2s, color 0.2s;
+        }
+
+        .icon-btn:hover {
+            background: var(--border);
+            color: var(--bg-base);
+        }
+
+        .icon-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0px var(--border);
+        }
+
+        header {
+            margin-bottom: 3rem;
+            text-align: left;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 1rem;
+        }
+
+        header h1 {
+            margin: 0 0 0.5rem 0;
+            font-size: 2.5rem;
+            font-family: 'Georgia', serif;
+            text-transform: uppercase;
+            letter-spacing: -0.5px;
+        }
+
+        header p {
+            margin: 0;
+            color: var(--text-mut);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .card {
+            background: var(--bg-card);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+            border: 2px solid var(--border);
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .card h2 {
+            margin-top: 0;
+            margin-bottom: 1.25rem;
+            font-size: 1.1rem;
+            font-family: 'Georgia', serif;
+            text-transform: uppercase;
+            border-bottom: 1px dashed var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        /* Hardware Grid */
+        .info-container {
+            border: 2px solid var(--border);
+            background-color: var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1px;
+            background-color: var(--border);
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-card);
+            padding: 0.75rem;
+        }
+
+        .info-label {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.7rem;
+            color: var(--text-mut);
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+
+        .info-value {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.95rem;
+            font-weight: bold;
+        }
+
+        /* Loaded Models Sub-section */
+        .loaded-models-list {
+            padding: 0.75rem;
+            background: var(--bg-base);
+            border-top: 2px dashed var(--border);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.85rem;
+        }
+        .loaded-models-list span.active-model {
+            color: var(--success-txt);
+            font-weight: bold;
+        }
+
+        /* Upload Area */
+        .upload-area {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .dropzone {
+            position: relative;
+            width: 100%;
+            padding: 3rem 2rem;
+            border: 2px dashed var(--border);
+            background-color: var(--bg-base);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .dropzone:hover, .dropzone.dragover {
+            background-color: var(--dropzone-hover);
+            border-style: solid;
+            border-color: var(--acc-primary);
+        }
+
+        .dropzone input[type="file"] {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            cursor: pointer;
+            display: none; /* Removed full overlay to allow specific link clicks */
+        }
+
+        .browse-link {
+            color: var(--acc-primary);
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: bold;
+            position: relative;
+            z-index: 10; /* Keep above dropzone */
+        }
+        
+        .browse-link:hover {
+            color: var(--acc-hover);
+        }
+
+        /* Hover Transitions */
+        .dropzone:hover .drop-icon, .dropzone.dragover .drop-icon {
+            transform: translateY(-8px);
+            color: var(--acc-primary);
+        }
+
+        .dropzone:hover .drop-text, .dropzone.dragover .drop-text {
+            transform: translateY(-2px);
+        }
+
+        .drop-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            display: block;
+            transition: transform 0.3s ease, color 0.3s ease;
+        }
+
+        .drop-text {
+            font-family: 'Georgia', serif;
+            font-size: 1.25rem;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+            transition: transform 0.3s;
+        }
+
+        .drop-subtext {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.85rem;
+            color: var(--text-mut);
+        }
+
+        .btn {
+            background: var(--acc-primary);
+            color: var(--bg-base);
+            border: 2px solid var(--border);
+            padding: 0.875rem 1.5rem;
+            font-size: 1rem;
+            font-weight: bold;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 3px 3px 0px var(--border);
+            transition: transform 0.1s, box-shadow 0.1s, background-color 0.2s, color 0.2s;
+            width: 100%;
+            max-width: 250px;
+        }
+
+        .btn:hover {
+            background: var(--acc-hover);
+        }
+
+        .btn-secondary {
+            background: var(--bg-base);
+            color: var(--text-main);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+            color: var(--bg-base);
+        }
+
+        .btn:active {
+            transform: translate(2px, 2px) !important;
+            box-shadow: 1px 1px 0px var(--border) !important;
+        }
+        
+        .btn-dynamic-shadow {
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* Queue & CMD Terminal */
+        .terminal-window {
+            background-color: #111;
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .terminal-header {
+            background-color: var(--border);
+            color: var(--bg-base);
+            padding: 0.25rem 0.5rem;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .terminal-header::after {
+            content: "_";
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        .terminal-body {
+            padding: 1rem;
+            font-family: 'Courier New', Courier, monospace;
+            color: var(--acc-primary);
+            min-height: 100px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .queue-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.85rem;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .q-filename {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .q-progress-wrap {
+            flex: 2;
+            height: 12px;
+            border: 1px solid var(--acc-primary);
+            background: #222;
+        }
+
+        .q-progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: var(--acc-primary);
+            transition: width 0.3s linear;
+        }
+
+        .typing-cursor {
+            animation: blink 1s step-end infinite;
+            color: var(--acc-primary);
+            margin-left: 2px;
+        }
+
+        .q-status {
+            width: 45px;
+            text-align: right;
+        }
+
+                .q-download-icon {
+            cursor: not-allowed;
+            color: var(--text-mut);
+            transition: transform 0.2s;
+            padding: 0.25rem;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.5;
+        }
+
+        .q-download-icon.ready {
+            cursor: pointer;
+            color: var(--success-txt);
+            opacity: 1;
+        }
+        
+        .q-download-icon.ready:hover {
+            transform: scale(1.1);
+        }
+
+        .queue-actions {
+            display: flex;
+            gap: 2.5rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        /* Messaging */
+        .message-box {
+            padding: 1rem;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            font-weight: bold;
+            border: 2px solid var(--border);
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .message-box.error { background: var(--error-bg); color: var(--error-txt); border-color: var(--error-txt); }
+        .message-box.success { background: var(--success-bg); color: var(--success-txt); border-color: var(--success-txt); }
+        .hidden { display: none !important; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Behind the Scenes */
+        .canvas-container {
+            width: 100%;
+            overflow: auto;
+            background: var(--bg-base);
+            border: 2px solid var(--border);
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        canvas {
+            max-width: 100%;
+            height: auto;
+            background-color: var(--canvas-bg);
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        
+        .canvas-placeholder {
+            position: absolute;
+            font-family: 'Courier New', Courier, monospace;
+            color: var(--text-mut);
+            pointer-events: none;
+        }
+
+        /* Settings Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(2px);
+        }
+
+        .modal-content {
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: transparent;
+            border: none;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: var(--text-main);
+        }
+
+        .settings-section {
+            margin-bottom: 2rem;
+        }
+
+        .settings-section h3 {
+            font-family: 'Georgia', serif;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            color: var(--text-mut);
+        }
+
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px dashed var(--border);
+        }
+
+        .toggle-row:last-child {
+            border-bottom: none;
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .checkbox-wrapper input[type="checkbox"] {
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+            accent-color: var(--acc-primary);
+        }
+
+        /* Model Cache List */
+        .model-item {
+            background: var(--bg-base);
+            border: 2px solid var(--border);
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .model-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .model-size {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.75rem;
+            color: var(--text-mut);
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 8px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: var(--acc-primary);
+            transition: width 0.2s ease-out, background-color 0.3s;
+        }
+
+        /* Debug Page Navigation */
+        .debug-nav {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding: 0.5rem;
+        }
+        
+        .debug-doc-select {
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            color: var(--text-main);
+            padding: 0.4rem;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            outline: none;
+            cursor: pointer;
+            box-shadow: 2px 2px 0px var(--border);
+            max-width: 200px;
+        }
+
+        .debug-nav-btn {
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            color: var(--text-main);
+            padding: 0.4rem 0.8rem;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 2px 2px 0px var(--border);
+            transition: transform 0.1s, box-shadow 0.1s, background-color 0.2s, color 0.2s, opacity 0.2s;
+        }
+
+        .debug-nav-btn:hover:not(:disabled) {
+            background: var(--border);
+            color: var(--bg-base);
+        }
+
+        .debug-nav-btn:active:not(:disabled) {
+            transform: translate(1px, 1px);
+            box-shadow: 1px 1px 0px var(--border);
+        }
+
+        .debug-nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        #debug-page-info {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: var(--acc-primary);
+            min-width: 120px;
+            text-align: center;
+        }
+
+        /* Debug AI Box Legend */
+        .debug-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            margin-top: 0.75rem;
+            border: 1px dashed var(--border);
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.75rem;
+            color: var(--text-mut);
+            text-transform: uppercase;
+        }
+
+        .legend-swatch {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        /* Model Cache Status */
+        .model-cache-status {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.75rem;
+            color: var(--text-mut);
+        }
+
+        .model-cache-status.cached {
+            color: var(--success-txt);
+        }
+
+        .model-cache-status.not-cached {
+            color: var(--text-mut);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <div class="top-bar">
+            <button id="theme-toggle-btn" class="icon-btn">💡 Light Mode</button>
+            <button id="open-settings-btn" class="icon-btn">⚙ Settings</button>
+        </div>
+
+        <header>
+            <h1>PDF to DOCX Converter</h1>
+            <p>100% Client-Side • Heuristic Engine + AI Layout Analysis</p>
+        </header>
+
+        <!-- Hidden by default: Dev System Info -->
+        <section id="system-info-panel" class="card hardware-panel hidden">
+            <h2>System Profile</h2>
+            <div class="info-container">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Logical CPU Cores</span>
+                        <span id="hw-cores" class="info-value">Detecting...</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Device Memory (RAM)</span>
+                        <span id="hw-ram" class="info-value">Detecting...</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">WebGPU Support</span>
+                        <span id="hw-gpu" class="info-value">Detecting...</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Selected AI Model</span>
+                        <span id="selected-model" class="info-value">Auto Fallback</span>
+                    </div>
+                </div>
+                <div class="loaded-models-list" id="loaded-models-container">
+                    <!-- JS Injected loaded models -->
+                    Loading modules...
+                </div>
+            </div>
+        </section>
+
+        <!-- Document Upload Interface -->
+        <section class="card upload-panel">
+            <h2>Upload Document</h2>
+            <div class="upload-area">
+                <div class="dropzone" id="dropzone">
+                    <span class="drop-icon" id="drop-icon">📄</span>
+                    <div class="drop-text" id="drop-text">Drag & Drop PDFs, ZIPs or Folders</div>
+                    <div class="drop-subtext" id="drop-subtext">
+                        Click to browse <span class="browse-link" id="browse-files-btn">files</span> or <span class="browse-link" id="browse-folders-btn">folders</span>
+                    </div>
+                </div>
+                <!-- Hidden inputs for specific selections -->
+                <input type="file" id="pdf-upload" accept="application/pdf,application/zip,.zip" multiple class="hidden" />
+                <input type="file" id="folder-upload" webkitdirectory directory multiple class="hidden" />
+                
+                <button id="convert-btn" class="btn">Convert Document</button>
+                <div id="message-box" class="message-box hidden"></div>
+            </div>
+        </section>
+
+        <!-- Conversion Queue -->
+        <section class="card queue-panel hidden" id="queue-panel">
+            <h2>Conversion Queue</h2>
+            <div class="terminal-window">
+                <div class="terminal-header">C:\system\bin\convert.exe</div>
+                <div class="terminal-body" id="queue-list">
+                    <!-- JS Injected Queue Items -->
+                </div>
+            </div>
+            <div class="queue-actions hidden" id="queue-actions">
+                <button id="download-all-btn" class="btn btn-dynamic-shadow">Download All</button>
+                <button id="download-zip-btn" class="btn btn-secondary btn-dynamic-shadow">Download as .ZIP</button>
+            </div>
+        </section>
+
+        <!-- Behind the Scenes (Dev Mode Only) -->
+        <section id="behind-scenes-panel" class="card canvas-panel hidden">
+            <h2 id="preview-title">Behind the Scenes Debugger</h2>
+            <div class="debug-nav">
+                <select id="debug-doc-select" class="debug-doc-select" title="Select Document">
+                    <option value="">No docs processed</option>
+                </select>
+                <button class="debug-nav-btn" id="debug-prev-btn" title="Previous page">◀</button>
+                <span id="debug-page-info">Page 0 of 0</span>
+                <button class="debug-nav-btn" id="debug-next-btn" title="Next page">▶</button>
+            </div>
+            <div class="canvas-container">
+                <span class="canvas-placeholder" id="canvas-placeholder">Layout extraction boundaries will appear here...</span>
+                <canvas id="pdf-canvas"></canvas>
+            </div>
+            <div class="debug-legend" id="debug-legend">
+                <span class="legend-item"><span class="legend-swatch" style="background: rgba(34,197,94,0.7)"></span>Text</span>
+                <span class="legend-item"><span class="legend-swatch" style="background: rgba(59,130,246,0.7)"></span>Table</span>
+                <span class="legend-item"><span class="legend-swatch" style="background: rgba(168,85,247,0.7)"></span>Image</span>
+                <span class="legend-item"><span class="legend-swatch" style="background: rgba(249,115,22,0.7)"></span>Formula</span>
+                <span class="legend-item"><span class="legend-swatch" style="background: rgba(236,72,153,0.7)"></span>Header</span>
+                <span class="legend-item"><span class="legend-swatch" style="background: rgba(107,114,128,0.7)"></span>Footer</span>
+                <span class="legend-item"><span class="legend-swatch" style="background: rgba(239,68,68,0.7)"></span>Chart</span>
+            </div>
+        </section>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay hidden">
+        <div class="card modal-content">
+            <button id="close-settings-btn" class="close-btn">✖</button>
+            <h2>Application Settings</h2>
+            
+            <div class="settings-section">
+                <h3>Preferences</h3>
+                <div class="toggle-row">
+                    <label class="checkbox-wrapper">
+                        <input type="checkbox" id="dev-mode-toggle">
+                        Developer Mode
+                    </label>
+                </div>
+                <div class="toggle-row" style="flex-direction: column; align-items: flex-start; gap: 0.5rem;">
+                    <label style="font-family: 'Courier New', Courier, monospace; font-size: 0.9rem; font-weight: bold; width: 100%; display: flex; justify-content: space-between;">
+                        Worker Pool Size (Concurrency)
+                        <span id="pool-size-display">Auto</span>
+                    </label>
+                    <input type="range" id="pool-size-slider" min="0" max="16" value="0" style="width: 100%; accent-color: var(--acc-primary);">
+                    <div style="font-family: 'Courier New', Courier, monospace; font-size: 0.75rem; color: var(--text-mut);">
+                        Recommended (Auto): <span id="recommended-pool-size">...</span>. Higher uses more RAM. Set to 0 for Auto.
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Offline AI Models</h3>
+                <p style="font-family: 'Courier New'; font-size: 0.8rem; color: var(--text-mut); margin-top: 0;">Cache models locally via the browser Cache API for offline use.</p>
+                
+                <div id="models-list-container">
+                    <div class="model-item">
+                        <div class="model-header">
+                            <label class="checkbox-wrapper">
+                                <input type="checkbox" id="cache-layout-model" data-model-url="../models/ppu-doclayout.onnx" data-cache-name="pdf-docx-models-v2">
+                                Layout Analysis (PP-DocLayout)
+                            </label>
+                            <span class="model-size">~50 MB</span>
+                        </div>
+                        <div class="progress-container hidden" id="layout-model-progress-wrap">
+                            <div class="progress-bar" id="layout-model-progress"></div>
+                        </div>
+                        <span class="model-cache-status" id="layout-model-status">Checking…</span>
+                    </div>
+
+                    <div class="model-item">
+                        <div class="model-header">
+                            <label class="checkbox-wrapper">
+                                <input type="checkbox" id="cache-table-model" data-model-url="../models/ppstructure-slanet.onnx" data-cache-name="specialist-models-v2">
+                                Table Structure (PP-StructureV2)
+                            </label>
+                            <span class="model-size">~7 MB</span>
+                        </div>
+                        <div class="progress-container hidden" id="table-model-progress-wrap">
+                            <div class="progress-bar" id="table-model-progress"></div>
+                        </div>
+                        <span class="model-cache-status" id="table-model-status">Checking…</span>
+                    </div>
+
+                    <div class="model-item">
+                        <div class="model-header">
+                            <label class="checkbox-wrapper">
+                                <input type="checkbox" id="cache-formula-enc-model" data-model-url="../models/rapidlatexocr-encoder.onnx" data-cache-name="specialist-models-v2">
+                                LaTeX OCR — Encoder
+                            </label>
+                            <span class="model-size">~25 MB</span>
+                        </div>
+                        <div class="progress-container hidden" id="formula-enc-model-progress-wrap">
+                            <div class="progress-bar" id="formula-enc-model-progress"></div>
+                        </div>
+                        <span class="model-cache-status" id="formula-enc-model-status">Checking…</span>
+                    </div>
+
+                    <div class="model-item">
+                        <div class="model-header">
+                            <label class="checkbox-wrapper">
+                                <input type="checkbox" id="cache-formula-dec-model" data-model-url="../models/rapidlatexocr-decoder.onnx" data-cache-name="specialist-models-v2">
+                                LaTeX OCR — Decoder
+                            </label>
+                            <span class="model-size">~5 MB</span>
+                        </div>
+                        <div class="progress-container hidden" id="formula-dec-model-progress-wrap">
+                            <div class="progress-bar" id="formula-dec-model-progress"></div>
+                        </div>
+                        <span class="model-cache-status" id="formula-dec-model-status">Checking…</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Controller -->
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

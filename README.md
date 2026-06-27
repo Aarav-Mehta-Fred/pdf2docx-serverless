@@ -18,4 +18,4 @@ Curious about how we run multiple machine learning models and parse PDF byte-str
 * [Contributing Guide](./CONTRIBUTING.md) - How to run the project locally and contribute.
 
 ## Try it Out
-[Live Demo: pdf2docx-serverless.netlify.app](pdf2docx-serverless.netlify.app)
+[Live Demo: pdf2docx-serverless.netlify.app](https://pdf2docx-serverless.netlify.app)

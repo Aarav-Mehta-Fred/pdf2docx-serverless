@@ -1,0 +1,36 @@
+[build]
+  command = "echo 'No build step required'"
+  publish = "."
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Required for SharedArrayBuffer (ONNX Runtime, Tesseract.js)
+    Cross-Origin-Opener-Policy = "same-origin"
+    Cross-Origin-Embedder-Policy = "require-corp"
+    # Security
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    # CSP - allow CDN scripts, HuggingFace model downloads, blob workers
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://esm.sh https://unpkg.com 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://cdn.jsdelivr.net https://esm.sh https://unpkg.com https://huggingface.co https://*.huggingface.co https://*.hf.co blob: data:; worker-src 'self' blob:; img-src 'self' data: blob:; media-src 'self' data: blob:;"
+
+# Cross-origin for worker files
+[[headers]]
+  for = "/js/*.js"
+  [headers.values]
+    Cross-Origin-Resource-Policy = "cross-origin"
+
+# WASM files
+[[headers]]
+  for = "/*.wasm"
+  [headers.values]
+    Content-Type = "application/wasm"
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# SPA fallback
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
