@@ -22,15 +22,9 @@
   [headers.values]
     Cross-Origin-Resource-Policy = "cross-origin"
 
-# WASM files
+# Catch WASM files ANYWHERE in the directory structure
 [[headers]]
-  for = "/*.wasm"
+  for = "/**/*.wasm"
   [headers.values]
     Content-Type = "application/wasm"
     Cache-Control = "public, max-age=31536000, immutable"
-
-# SPA fallback
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200

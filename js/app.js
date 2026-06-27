@@ -18,8 +18,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.mjs';
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.worker.mjs';
+
+// CSP Blob Workaround: Fetch the worker, convert to Blob, and create a local URL
+const workerUrl = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.worker.mjs';
+const workerResponse = await fetch(workerUrl);
+const workerText = await workerResponse.text();
+const workerBlob = new Blob([workerText], { type: 'application/javascript' });
+pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(workerBlob);
 
 import JSZip from 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm';
 
