@@ -14,7 +14,7 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
     # CSP - allow CDN scripts, HuggingFace model downloads, blob workers
-    Content-Security-Policy = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://esm.sh https://unpkg.com 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://cdn.jsdelivr.net https://esm.sh https://unpkg.com https://huggingface.co https://*.huggingface.co https://*.hf.co blob: data:; worker-src 'self' blob:; img-src 'self' data: blob:; media-src 'self' data: blob:;"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://esm.sh https://unpkg.com 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://cdn.jsdelivr.net https://esm.sh https://unpkg.com https://huggingface.co https://*.huggingface.co https://*.hf.co blob: data:; worker-src 'self' blob: https://cdn.jsdelivr.net; img-src 'self' data: blob:; media-src 'self' data: blob:;"
 
 # Cross-origin for worker files
 [[headers]]
